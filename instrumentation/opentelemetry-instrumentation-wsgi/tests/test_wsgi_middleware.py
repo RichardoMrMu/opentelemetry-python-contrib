@@ -24,6 +24,10 @@ from opentelemetry.instrumentation._semconv import (
     _server_duration_attrs_old,
     _StabilityMode,
 )
+from opentelemetry.instrumentation.utils import (
+    suppress_http_instrumentation,
+    suppress_instrumentation,
+)
 from opentelemetry.sdk.metrics.export import (
     HistogramDataPoint,
     NumberDataPoint,
@@ -381,6 +385,26 @@ class TestWsgiApplication(WsgiTestBase):
             span_attributes={"hook_attr": "hello world"},
             response_headers=(hook_headers,),
         )
+
+    def test_wsgi_suppress_instrumentation(self):
+        app = otel_wsgi.OpenTelemetryMiddleware(simple_wsgi)
+
+        with suppress_instrumentation():
+            response = list(app(self.environ, self.start_response))
+
+        self.assertEqual(response, [b"*"])
+        self.assertEqual(self.status, "200 OK")
+        self.assertEqual(len(self.memory_exporter.get_finished_spans()), 0)
+
+    def test_wsgi_suppress_http_instrumentation(self):
+        app = otel_wsgi.OpenTelemetryMiddleware(simple_wsgi)
+
+        with suppress_http_instrumentation():
+            response = list(app(self.environ, self.start_response))
+
+        self.assertEqual(response, [b"*"])
+        self.assertEqual(self.status, "200 OK")
+        self.assertEqual(len(self.memory_exporter.get_finished_spans()), 0)
 
     def test_wsgi_not_recording(self):
         mock_tracer = mock.Mock()

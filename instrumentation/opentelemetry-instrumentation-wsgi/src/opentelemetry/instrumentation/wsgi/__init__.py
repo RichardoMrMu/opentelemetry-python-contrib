@@ -252,7 +252,10 @@ from opentelemetry.instrumentation._semconv import (
     _set_status,
     _StabilityMode,
 )
-from opentelemetry.instrumentation.utils import _start_internal_or_server_span
+from opentelemetry.instrumentation.utils import (
+    _start_internal_or_server_span,
+    is_http_instrumentation_enabled,
+)
 from opentelemetry.instrumentation.wsgi.version import __version__
 from opentelemetry.metrics import MeterProvider, get_meter
 from opentelemetry.propagators.textmap import Getter
@@ -668,6 +671,9 @@ class OpenTelemetryMiddleware:
             environ: A WSGI environment.
             start_response: The WSGI start_response callable.
         """
+        if not is_http_instrumentation_enabled():
+            return self.wsgi(environ, start_response)
+
         req_attrs = collect_request_attributes(
             environ,
             self._sem_conv_opt_in_mode,
